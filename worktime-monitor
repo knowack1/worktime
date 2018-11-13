@@ -1,0 +1,6 @@
+#!/bin/bash
+
+SCRIPT=`basename "$0"`
+DIR=$HOME/.${SCRIPT}
+mkdir -p $DIR 
+dbus-monitor --session "type='signal',interface='org.gnome.ScreenSaver'"  | ts "%G-%m-%d %H:%M:%S" >> $DIR/${SCRIPT}.log

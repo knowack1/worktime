@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+import os
+from datetime import datetime, timedelta
+from prettytable import PrettyTable
+import itertools
+
+HOME = os.path.expanduser("~")
+WORKTIMEDIR = ".worktime-monitor"
+LOGFILENAME = "worktime-monitor.log"
+REPORT_FILE = os.path.join(HOME, WORKTIMEDIR, LOGFILENAME)
+ANNUAL_DAY_WORK_TIME = timedelta(hours = 8)
+
+def is_screen_change(line):
+    return "boolean " in line
+
+def parse(line):
+    splitted = line.split("boolean")
+    dt = datetime.strptime(splitted[0].strip(), '%Y-%m-%d %H:%M:%S')
+    return dt, splitted[-1].strip() == "true"
+
+def read_data(file):
+    data = []
+    with open(file) as f:
+        for line in f:
+            if is_screen_change(line):
+                dt, state = parse(line)
+                data.append((dt,state))
+    return data
+
+def get_day_effective_work_time(day_data):
+    def is_end_of_effective_period(sample):
+        return sample[1]
+    prev = day_data[0]
+    effective_time = timedelta()
+    for cur in day_data[1:]:
+        if is_end_of_effective_period(cur):
+            effective_time += cur[0] - prev[0]
+        prev = cur
+    return effective_time
+
+def get_day_stats(day_data):
+    list_day_data = list(day_data)
+    work_start_time = list_day_data[0][0]
+    work_end_time = list_day_data[-1][0]
+    work_time = work_end_time - work_start_time
+    return work_start_time.time(), work_end_time.time(), work_time, get_day_effective_work_time(list_day_data)
+
+def signed_timedelta_str(td):
+    if td.days < 0:
+        return '-' + str(timedelta() - td)
+    return str(td)
+
+def timedelate_hours_str(td):
+    total_seconds = td.total_seconds()
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return '{}:{}:{}'.format(int(hours), int(minutes), int(seconds))
+
+def is_today(date):
+    return date == datetime.today().date()
+
+data = read_data(REPORT_FILE)
+
+total_working_days = 0
+total_work_time = timedelta()
+
+for week, week_data in itertools.groupby(data, lambda x : x[0].isocalendar()[1]):
+    week_working_days = 0
+    week_work_time = timedelta()
+    week_stats_table = PrettyTable(["Date", "Day", "Work start time",
+        "Work end time", "Work time", "Effective work time",
+        "Diff from annula time"], print_empty = False)
+    for day, day_data in itertools.groupby(week_data, lambda x : x[0].date()):
+        if(is_today(day)):
+            break
+        work_start_time, work_end_time, work_time, effective_work_time = get_day_stats(day_data)
+        week_stats_table.add_row([day, day.strftime("%A"), work_start_time,
+                work_end_time, work_time, effective_work_time,
+                signed_timedelta_str(work_time - ANNUAL_DAY_WORK_TIME)])
+
+        week_work_time += work_time
+        week_working_days += 1
+
+    print(week_stats_table.get_string(title="Week {} working days: {} work time: {} diff: {}".
+        format(week,week_working_days, timedelate_hours_str(week_work_time),
+            signed_timedelta_str(week_work_time - ANNUAL_DAY_WORK_TIME * week_working_days))))
+    print()
+
+    total_working_days += week_working_days
+    total_work_time += week_work_time
+
+print("total working days: {} total work time: {} total diff: {}".
+        format(total_working_days, total_work_time,
+            signed_timedelta_str(total_work_time - ANNUAL_DAY_WORK_TIME * total_working_days)))
