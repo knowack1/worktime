@@ -91,5 +91,5 @@ for week, week_data in itertools.groupby(data, lambda x : x[0].isocalendar()[1])
     total_work_time += week_work_time
 
 print("total working days: {} total work time: {} total diff: {}".
-        format(total_working_days, total_work_time,
+        format(total_working_days, timedelate_hours_str(total_work_time),
             signed_timedelta_str(total_work_time - ANNUAL_DAY_WORK_TIME * total_working_days)))
