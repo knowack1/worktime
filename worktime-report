@@ -3,6 +3,13 @@ import os
 from datetime import datetime, timedelta
 from prettytable import PrettyTable
 import itertools
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-t", "--with-today", action="store_true",
+        dest="with_today", help="report includes today")
+
+options, _ = parser.parse_args()
 
 HOME = os.path.expanduser("~")
 WORKTIMEDIR = ".worktime-monitor"
@@ -71,7 +78,7 @@ for week, week_data in itertools.groupby(data, lambda x : x[0].isocalendar()[1])
         "Work end time", "Work time", "Effective work time", "Work time/Effective (%)",
         "Diff from annula time"], print_empty = False)
     for day, day_data in itertools.groupby(week_data, lambda x : x[0].date()):
-        if(is_today(day)):
+        if not options.with_today and is_today(day):
             break
         work_start_time, work_end_time, work_time, effective_work_time = get_day_stats(day_data)
         week_stats_table.add_row([day, day.strftime("%A"), work_start_time,
