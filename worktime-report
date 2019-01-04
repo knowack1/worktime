@@ -66,6 +66,12 @@ def timedelate_hours_str(td):
 def is_today(date):
     return date == datetime.today().date()
 
+def effectiveness_rate(effective_work_time, work_time):
+    try:
+        return int(effective_work_time/work_time * 100)
+    except ZeroDivisionError:
+        return 0
+
 data = read_data(REPORT_FILE)
 
 total_working_days = 0
@@ -83,7 +89,7 @@ for week, week_data in itertools.groupby(data, lambda x : x[0].isocalendar()[1])
         work_start_time, work_end_time, work_time, effective_work_time = get_day_stats(day_data)
         week_stats_table.add_row([day, day.strftime("%A"), work_start_time,
                 work_end_time, work_time, effective_work_time,
-                int(effective_work_time/work_time * 100),
+                effectiveness_rate(effective_work_time, work_time),
                 signed_timedelta_str(work_time - ANNUAL_DAY_WORK_TIME)])
 
         week_work_time += work_time
